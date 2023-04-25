@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>register</title>
+    <style>
+      /* 通过设置body元素的高度、宽度和边距为0，以确保整个页面的大小适合屏幕 */
+      * {
+        font-family: 微软雅黑, serif;
+        -webkit-font-smoothing: subpixel-antialiased;
+      }
+      body {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+      }
+      html {
+        width: auto;
+        height: 100vh;
+      }
+      .header {
+        background-color: #0b6869;
+        text-align: center;
+        color: #ffffff;
+        padding: 15px;
+      }
+      .center {
+        height: 100vh;
+        /*width: 50%;*/
+        /*border: 2px solid #e11010;*/
+        margin: auto;
+        position: relative;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+      .center form {
+        padding: 20px 30px;
+        max-width: 340px;
+        margin: auto;
+      }
+      .form_item {
+        /*border: 1px solid blue;*/
+        text-align: start;
+        display: flex;
+        flex: 1 0 auto;
+        padding: 15px 0;
+        justify-content: flex-start;
+      }
+      .form_item label:first-child {
+        min-width: 100px;
+      }
+      input {
+        border: none;
+        width: 100%;
+        min-height: 30px;
+      }
+      .invalid {
+        border: 1px dashed red;
+      }
+      .normal {
+        color: white;
+        background-color: #0b6869;
+      }
+      .sending {
+        color: #232222;
+        background-color: #e7effd;
+        cursor: not-allowed;
+      }
+      .resister,
+      .download {
+        padding-top: 20px;
+        text-align: center;
+      }
+      a {
+        color: red;
+        text-decoration: none;
+      }
+      .captcha {
+        border-radius: 20px;
+        justify-items: self-end;
+        padding: 5px;
+        width: 120px;
+      }
+      .register {
+        min-width: 350px;
+        padding: 15px 0;
+      }
+    </style>
+    <script src="lib/crypto-js.min.js"></script>
+  </head>
+  <body>
+    <div class="center">
+      <div class="header">账号注册</div>
+      <form action="" method="post" id="f_register">
+        <div class="form_item">
+          <label for="account">手机号</label>
+          <input type="text" id="account" name="account" placeholder="请输入手机号" />
+        </div>
+        <div class="form_item">
+          <label for="smsCode">验证码</label>
+          <input type="text" id="smsCode" name="smsCode" placeholder="请输入验证码" />
+          <input type="button" id="btn_captcha" value="发送验证码" class="captcha normal" />
+        </div>
+        <div class="form_item">
+          <label for="loginPwd">密码</label>
+          <input type="password" id="loginPwd" name="loginPwd" placeholder="请输入密码" autocomplete="off" />
+        </div>
+        <div class="form_item">
+          <label for="f_pwd_conform">确认密码</label>
+          <input type="password" id="f_pwd_conform" name="f_pwd_conform" placeholder="请再次输入密码" autocomplete="off" />
+        </div>
+        <div class="form_item">
+          <label for="beInviteCode">邀请码</label>
+          <input type="text" id="beInviteCode" name="beInviteCode" placeholder="请输入邀请码" />
+        </div>
+        <div class="resister">
+          <input type="button" value="立即注册" id="btn_register" class="register normal" />
+        </div>
+        <div class="download">
+          已注册?
+          <a href="http://zhenpingoushop.com/">立即下载APP</a>
+        </div>
+      </form>
+    </div>
+    <script>
+      /**
+       * 接口文档:
+       *  验证码: https://console-docs.apipost.cn/preview/59e9e1e4ac8f2586/5eb7becb54eab5ce
+       *  帐户注册: https://console-docs.apipost.cn/preview/1fff739e1a53c534/16b96a2f0859ae84
+       *
+       * 测试接口入口: http://zhenpingoushop.com/api
+       */
+      window.onload = () => {
+        const baseUrl = 'http://zhenpingoushop.com/api/'
+        const params = new URLSearchParams(window.location.search)
+        //邀请码: https://download.weifengfy.com/#/?QRcode=123456
+        const qRcode = params.get('QRcode')
+        const ele_beInviteCode = document.getElementById('beInviteCode')
+        ele_beInviteCode.value = qRcode || ''
+        const ele_phone = document.getElementById('account')
+        const ele_captcha = document.getElementById('btn_captcha')
+        // 通过手机号发送验证码
+        document.getElementById('btn_captcha')?.addEventListener('click', (event) => {
+          if (/^1[3456789]\d{9}$/.test(ele_phone.value)) {
+            // 发送验证码时等待处理
+            let time = 12
+            ele_captcha.disabled = true
+            ele_captcha.classList.remove('normal')
+            ele_captcha.classList.add('sending')
+            ele_captcha.value = `${time}`
+            const intcur = setInterval(() => {
+              time--
+              if (time < 1) {
+                clearInterval(intcur)
+                ele_captcha.classList.remove('sending')
+                ele_captcha.classList.add('normal')
+                ele_captcha.value = `发送验证码`
+                ele_captcha.disabled = false
+              } else {
+                ele_captcha.value = `${time}`
+              }
+            }, 1000)
+            // http://admin.toodao.net/api/user/sendRegisterSmsCode?account=13588888888
+            fetch(`${baseUrl}user/sendRegisterSmsCode?account=${ele_phone.value}`, { method: 'post' })
+              .then((response) => response.json())
+              .then((data) => {
+                // {
+                //   "code": 0,
+                //   "msg": "成功",
+                //   "data": true,
+                //   "serverTime": 1679551984335
+                // }
+                console.log(data)
+              })
+          } else {
+            //
+            ele_phone.classList.add('invalid')
+          }
+        })
+        const ele_form = document.getElementById('f_register')
+        document.querySelectorAll('#account, #f_pwd_conform, #loginPwd, #smsCode').forEach((element) => {
+          element.addEventListener('blur', (e) => {
+            if (e.target.value.length > 0) {
+              e.target.classList.remove('invalid')
+            }
+          })
+        })
+        document.getElementById('btn_register')?.addEventListener('click', (event) => {
+          // user/register?
+          // account=13590135255
+          // &loginPwd=123456
+          // &smsCode=623921
+          // &nickName=13590135259
+          // &memberSex=1
+          // &cid=unknown
+          // &systemType=0
+          // &sourceRegistration=1
+          // &state=1
+          // &beInviteCode=G4QHE7
+          const formData = new FormData(ele_form)
+          const validator = ['account', 'loginPwd', 'smsCode', 'beInviteCode', 'f_pwd_conform'].some((name, index) => {
+            if (!formData.get(name)) {
+              console.log(name, '必填')
+              // 边框变红提示
+              document.getElementById(name)?.classList.add('invalid')
+              return false
+            }
+            return true
+          })
+          // 确认密码一致性检查
+          console.log(formData.get('loginPwd'), formData.get('f_pwd_conform'), validator)
+          if (!validator) return
+          event.target.disabled = true
+          setTimeout(() => {
+            event.target.disabled = false
+          }, 5000)
+          const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
+          formData.set('nickName', formData.get('account'))
+          formData.set('memberSex', '1')
+          formData.set('cid', 'unknown')
+          formData.set('systemType', isIos)
+          formData.set('sourceRegistration', '1')
+          formData.set('state', '1')
+          formData.set('loginPwd', encryptByAES(formData.get('loginPwd')))
+          formData.delete('f_pwd_conform')
+          fetch(`${baseUrl}user/register`, { method: 'post', body: formData })
+            .then((response) => response.json())
+            .then((data) => {
+              console.log(data)
+              data['code'] === 0 && alert('注册成功')
+              data['code'] === 0 && (window.location.href = 'http://zhenpingoushop.com/')
+            })
+            .catch(console.log)
+        })
+      }
+      // 密钥
+      let key = CryptoJS.enc.Utf8.parse('sfdsdfjkKKjnKHJNk')
+
+      // 向量
+      let iv = CryptoJS.enc.Utf8.parse('1234567890123456')
+
+      // 加密函数
+      function encryptByAES(message) {
+        let encrypted = CryptoJS.AES.encrypt(message, key, {
+          iv: iv,
+          mode: CryptoJS.mode.CBC,
+          padding: CryptoJS.pad.Pkcs7,
+        })
+        return encrypted.toString()
+      }
+
+      // 解密函数
+      function decryptByAES(ciphertext) {
+        let decrypted = CryptoJS.AES.decrypt(ciphertext, key, {
+          iv: iv,
+          mode: CryptoJS.mode.CBC,
+          padding: CryptoJS.pad.Pkcs7,
+        })
+        return decrypted.toString(CryptoJS.enc.Utf8)
+      }
+    </script>
+  </body>
+</html>
