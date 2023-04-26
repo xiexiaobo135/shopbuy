@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>register</title>
     <style>
       /* 通过设置body元素的高度、宽度和边距为0，以确保整个页面的大小适合屏幕 */
@@ -9,10 +10,14 @@
         font-family: 微软雅黑, serif;
         -webkit-font-smoothing: subpixel-antialiased;
       }
+      ::-webkit-scrollbar {
+        display: none;
+      }
       body {
         height: 100%;
         width: 100%;
         margin: 0;
+        overflow-y: hidden;
       }
       html {
         width: auto;
@@ -26,8 +31,6 @@
       }
       .center {
         height: 100vh;
-        /*width: 50%;*/
-        /*border: 2px solid #e11010;*/
         margin: auto;
         position: relative;
         top: 50%;
@@ -39,20 +42,20 @@
         margin: auto;
       }
       .form_item {
-        /*border: 1px solid blue;*/
+        border-bottom: 1px solid #d1cbcb;
         text-align: start;
         display: flex;
         flex: 1 0 auto;
         padding: 15px 0;
         justify-content: flex-start;
+        align-items: center;
       }
       .form_item label:first-child {
-        min-width: 100px;
+        min-width: 80px;
       }
       input {
         border: none;
         width: 100%;
-        min-height: 30px;
       }
       .invalid {
         border: 1px dashed red;
@@ -69,7 +72,7 @@
       }
       .resister,
       .download {
-        padding-top: 20px;
+        padding-top: 35px;
         text-align: center;
       }
       a {
@@ -80,11 +83,14 @@
         border-radius: 20px;
         justify-items: self-end;
         padding: 5px;
-        width: 120px;
+        margin-left: 10px;
+        height: 30px;
       }
       .register {
-        min-width: 350px;
+        min-width: 80%;
+        height: 45px;
         padding: 15px 0;
+        font-size: 18px;
       }
     </style>
     <!--    <script src="lib/crypto-js.min.js"></script>-->
