@@ -61,9 +61,10 @@
         color: white;
         background-color: #0b6869;
       }
-      .sending {
-        color: #232222;
-        background-color: #e7effd;
+      .sending,
+      .registering {
+        color: #5f6878;
+        background-color: #e8f0fe;
         cursor: not-allowed;
       }
       .resister,
@@ -86,7 +87,7 @@
         padding: 15px 0;
       }
     </style>
-    <script src="lib/crypto-js.min.js"></script>
+    <!--    <script src="lib/crypto-js.min.js"></script>-->
   </head>
   <body>
     <div class="center">
@@ -130,8 +131,16 @@
        *
        * 测试接口入口: http://zhenpingoushop.com/api
        */
+      // 验证码按钮重新发送时间限制; 注册按钮重新激活时间限制; 基础接口路径; 定义加密密钥和初始化向量;
+      const reSendTime = 120,
+        throttler = 5000,
+        baseUrl = 'http://zhenpingoushop.com/api/',
+        // key = CryptoJS.enc.Hex.parse('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'),
+        // iv = CryptoJS.enc.Hex.parse('0123456789abcdef0123456789abcdef'),
+        requiredItems = ['account', 'f_pwd_conform', 'loginPwd', 'smsCode', 'beInviteCode']
+
       window.onload = () => {
-        const baseUrl = 'http://zhenpingoushop.com/api/'
+        const ele_form = document.getElementById('f_register')
         const params = new URLSearchParams(window.location.search)
         //邀请码: https://download.weifengfy.com/#/?QRcode=123456
         const qRcode = params.get('QRcode')
@@ -139,25 +148,26 @@
         ele_beInviteCode.value = qRcode || ''
         const ele_phone = document.getElementById('account')
         const ele_captcha = document.getElementById('btn_captcha')
-        // 通过手机号发送验证码
+        const ele_register = document.getElementById('btn_register')
+        // ① 通过手机号发送验证码事件
         document.getElementById('btn_captcha')?.addEventListener('click', (event) => {
           if (/^1[3456789]\d{9}$/.test(ele_phone.value)) {
             // 发送验证码时等待处理
-            let time = 12
+            let _time = reSendTime
             ele_captcha.disabled = true
             ele_captcha.classList.remove('normal')
             ele_captcha.classList.add('sending')
-            ele_captcha.value = `${time}`
+            ele_captcha.value = `已发送 ${_time}`
             const intcur = setInterval(() => {
-              time--
-              if (time < 1) {
+              _time--
+              if (_time < 1) {
                 clearInterval(intcur)
                 ele_captcha.classList.remove('sending')
                 ele_captcha.classList.add('normal')
-                ele_captcha.value = `发送验证码`
+                ele_captcha.value = `重发验证码`
                 ele_captcha.disabled = false
               } else {
-                ele_captcha.value = `${time}`
+                ele_captcha.value = `已发送 ${_time}`
               }
             }, 1000)
             // http://admin.toodao.net/api/user/sendRegisterSmsCode?account=13588888888
@@ -177,14 +187,18 @@
             ele_phone.classList.add('invalid')
           }
         })
-        const ele_form = document.getElementById('f_register')
-        document.querySelectorAll('#account, #f_pwd_conform, #loginPwd, #smsCode').forEach((element) => {
-          element.addEventListener('blur', (e) => {
+        // ② 提示样式清理事件
+        requiredItems.forEach((name) => {
+          document.getElementById(name)?.addEventListener('blur', (e) => {
             if (e.target.value.length > 0) {
+              e.target.classList.remove('invalid')
+            } else {
+              e.target.classList.add('invalid')
               e.target.classList.remove('invalid')
             }
           })
         })
+        // ③ 帐户注册信息事件
         document.getElementById('btn_register')?.addEventListener('click', (event) => {
           // user/register?
           // account=13590135255
@@ -198,9 +212,9 @@
           // &state=1
           // &beInviteCode=G4QHE7
           const formData = new FormData(ele_form)
-          const validator = ['account', 'loginPwd', 'smsCode', 'beInviteCode', 'f_pwd_conform'].some((name, index) => {
+          let validator = requiredItems.some((name, index) => {
             if (!formData.get(name)) {
-              console.log(name, '必填')
+              // console.log(name, '必填')
               // 边框变红提示
               document.getElementById(name)?.classList.add('invalid')
               return false
@@ -208,55 +222,54 @@
             return true
           })
           // 确认密码一致性检查
-          console.log(formData.get('loginPwd'), formData.get('f_pwd_conform'), validator)
+          if (formData.get('loginPwd') !== formData.get('f_pwd_conform')) {
+            document.getElementById(name)?.classList.add('invalid')
+            return
+          }
           if (!validator) return
-          event.target.disabled = true
-          setTimeout(() => {
-            event.target.disabled = false
-          }, 5000)
-          const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
+
+          const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream ? '1' : '0'
           formData.set('nickName', formData.get('account'))
           formData.set('memberSex', '1')
           formData.set('cid', 'unknown')
           formData.set('systemType', isIos)
           formData.set('sourceRegistration', '1')
           formData.set('state', '1')
-          formData.set('loginPwd', encryptByAES(formData.get('loginPwd')))
+          // formData.set(
+          //   'loginPwd',
+          //   CryptoJS.AES.encrypt(formData.get('loginPwd'), key, { iv: iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 }).toString()
+          // )
+          // 验证
+          // console.log(
+          //   'decrypt: ',
+          //   CryptoJS.AES.decrypt(formData.get('loginPwd'), key, { iv: iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 }).toString(CryptoJS.enc.Utf8)
+          // )
           formData.delete('f_pwd_conform')
+
+          // 发送验证码时等待处理
+          ele_register.disabled = true
+          ele_register.classList.remove('normal')
+          ele_register.classList.add('registering')
+          ele_register.value = `注册中`
+          setTimeout(() => {
+            ele_register.classList.remove('registering')
+            ele_register.classList.add('normal')
+            ele_register.value = `立即注册`
+            ele_register.disabled = false
+          }, throttler)
           fetch(`${baseUrl}user/register`, { method: 'post', body: formData })
             .then((response) => response.json())
-            .then((data) => {
-              console.log(data)
-              data['code'] === 0 && alert('注册成功')
-              data['code'] === 0 && (window.location.href = 'http://zhenpingoushop.com/')
+            .then((result) => {
+              ele_register.disabled = false
+              // console.log(result)
+              alert(result['msg'])
+              result['code'] === 0 && (window.location.href = 'http://zhenpingoushop.com/')
             })
-            .catch(console.log)
+            .catch((err) => {
+              console.log('注册服务器异常', err)
+              ele_register.disabled = false
+            })
         })
-      }
-      // 密钥
-      let key = CryptoJS.enc.Utf8.parse('sfdsdfjkKKjnKHJNk')
-
-      // 向量
-      let iv = CryptoJS.enc.Utf8.parse('1234567890123456')
-
-      // 加密函数
-      function encryptByAES(message) {
-        let encrypted = CryptoJS.AES.encrypt(message, key, {
-          iv: iv,
-          mode: CryptoJS.mode.CBC,
-          padding: CryptoJS.pad.Pkcs7,
-        })
-        return encrypted.toString()
-      }
-
-      // 解密函数
-      function decryptByAES(ciphertext) {
-        let decrypted = CryptoJS.AES.decrypt(ciphertext, key, {
-          iv: iv,
-          mode: CryptoJS.mode.CBC,
-          padding: CryptoJS.pad.Pkcs7,
-        })
-        return decrypted.toString(CryptoJS.enc.Utf8)
       }
     </script>
   </body>
